@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arduino 机器人控制</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #e0e7ff, #f4f4f9);
+            color: #1a202c;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #2d3748;
+            font-size: 2.8em;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        #status {
+            padding: 15px 25px;
+            border-radius: 12px;
+            font-size: 1.2em;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .connected {
+            background: linear-gradient(90deg, #48bb78, #68d391);
+            color: #1a4731;
+            border: none;
+        }
+
+        .disconnected {
+            background: linear-gradient(90deg, #f56565, #fc8181);
+            color: #4a1c24;
+            border: none;
+        }
+
+        .control-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 2rem;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        button {
+            padding: 15px;
+            font-size: 1em;
+            font-weight: 500;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        button.primary {
+            background: linear-gradient(90deg, #4299e1, #63b3ed);
+            color: white;
+        }
+
+        button.secondary {
+            background: linear-gradient(90deg, #e53e3e, #f56565);
+            color: white;
+        }
+
+        button:disabled {
+            background: #e2e8f0;
+            color: #a0aec0;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        select {
+            padding: 12px;
+            font-size: 1em;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 1.5rem;
+            background-color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+        }
+
+        #log {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        #log h3 {
+            color: #2d3748;
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        #logMessages {
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 12px;
+            min-height: 150px;
+            max-height: 300px;
+            overflow-y: auto;
+            background-color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .log-entry {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #e2e8f0;
+            font-size: 0.95em;
+        }
+
+        .log-timestamp {
+            color: #718096;
+            font-size: 0.85em;
+            margin-right: 5px;
+        }
+
+        .info-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 15px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 2rem;
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-item {
+            text-align: center;
+        }
+
+        .info-item h4 {
+            font-size: 1em;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .info-item p {
+            font-size: 0.9em;
+            color: #718096;
+        }
+
+        @media (max-width: 500px) {
+            h1 {
+                font-size: 2.2em;
+            }
+
+            .control-panel {
+                grid-template-columns: 1fr;
+            }
+
+            button {
+                padding: 12px;
+                font-size: 0.95em;
+            }
+
+            #status {
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Arduino 机器人控制系统</h1>
+    <div id="status" class="disconnected">状态: 未连接</div>
+    <div class="info-panel">
+        <div class="info-item">
+            <h4>电源状态</h4>
+            <p>充足</p>
+        </div>
+        <div class="info-item">
+            <h4>WiFi 信号</h4>
+            <p>强</p>
+        </div>
+        <div class="info-item">
+            <h4>CPU 使用率</h4>
+            <p>20%</p>
+        </div>
+        <div class="info-item">
+            <h4>温度</h4>
+            <p>25°C</p>
+        </div>
+    </div>
+    <select id="portSelect" style="display: none;">
+        <!-- 动态加载串口列表 -->
+    </select>
+    <div class="control-panel">
+        <button id="connectBtn" class="primary">连接到 Arduino</button>
+        <button id="startCameraBtn" class="primary">启动摄像头</button>
+        <button id="forwardBtn" class="primary" disabled>灯光启动</button>
+        <button id="backwardBtn" class="primary" disabled>退出</button>
+        <button id="calibrateBtn" class="primary" disabled>校准位置</button>
+        <button id="danceBtn" class="primary" disabled>跳舞</button>
+        <button id="danceBtn" class="primary" disabled>避障模式</button>
+        <button id="disconnectBtn" class="secondary" disabled>断开连接</button>
+
+    </div>
+    <div id="log">
+        <h3>操作日志</h3>
+        <div id="logMessages"></div>
+    </div>
+    <script>
+        const startCameraBtn = document.getElementById('startCameraBtn');
+        const statusEl = document.getElementById('status');
+        const portSelect = document.getElementById('portSelect');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const forwardBtn = document.getElementById('forwardBtn');
+        const backwardBtn = document.getElementById('backwardBtn');
+        const danceBtn = document.getElementById('danceBtn');
+        const calibrateBtn = document.getElementById('calibrateBtn');
+        const logMessages = document.getElementById('logMessages');
+        let isConnected = false;
+
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/start_camera', { method: 'GET' });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert("摄像头已启动，开始检测动作！");
+                    startCameraBtn.disabled = true;
+                }
+            } catch (error) {
+                alert("启动摄像头失败！");
+            }
+        });
+
+        // 更新 UI 状态
+        function updateUI() {
+            connectBtn.disabled = isConnected || (portSelect.options.length === 0);
+            disconnectBtn.disabled = !isConnected;
+            forwardBtn.disabled = !isConnected;
+            backwardBtn.disabled = !isConnected;
+            danceBtn.disabled = !isConnected;
+            calibrateBtn.disabled = !isConnected;
+
+            if (isConnected) {
+                statusEl.textContent = `状态: 已连接（端口：${portSelect.value}）`;
+                statusEl.className = 'connected';
+            } else {
+                statusEl.textContent = '状态: 未连接';
+                statusEl.className = 'disconnected';
+            }
+        }
+
+        // 记录日志
+        function logMessage(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${message}`;
+            logMessages.appendChild(logEntry);
+            logMessages.scrollTop = logMessages.scrollHeight; // 滚动到底部
+        }
+
+        // 发送 API 请求
+        async function sendRequest(url, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                };
+                if (data) options.body = JSON.stringify(data);
+
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `HTTP错误: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                logMessage(`请求失败: ${error.message}`);
+                throw error;
+            }
+        }
+
+        // 加载可用串口列表
+        async function loadPorts() {
+            try {
+                const result = await sendRequest('/api/ports', 'GET');
+                if (result.status === 'success') {
+                    portSelect.innerHTML = ''; // 清空旧选项
+                    result.ports.forEach(port => {
+                        const option = document.createElement('option');
+                        option.value = port.name;
+                        option.textContent = `${port.name} - ${port.description}`;
+                        portSelect.appendChild(option);
+                    });
+                    portSelect.style.display = 'block'; // 显示下拉框
+                    updateUI(); // 根据串口数量更新连接按钮状态
+                } else {
+                    logMessage(`加载串口失败: ${result.message}`);
+                }
+            } catch (error) {
+                logMessage(`加载串口失败: ${error.message}`);
+            }
+        }
+
+        // 页面加载后自动加载串口
+        window.onload = () => {
+            loadPorts();
+            // 定期检查状态（可选，防止页面与实际状态不一致）
+            setInterval(async () => {
+                try {
+                    const result = await sendRequest('/api/status', 'GET');
+                    if (result.status === 'connected' && !isConnected) {
+                        isConnected = true;
+                        updateUI();
+                        logMessage('检测到已连接到 Arduino');
+                    } else if (result.status === 'disconnected' && isConnected) {
+                        isConnected = false;
+                        updateUI();
+                        logMessage('检测到已断开连接');
+                    }
+                } catch (error) {
+                    // 忽略状态检查错误
+                }
+            }, 3000);
+        };
+
+        // 连接 Arduino（选择串口后调用）
+        connectBtn.addEventListener('click', async () => {
+            if (!portSelect.value) {
+                logMessage('请选择串口');
+                return;
+            }
+            try {
+                logMessage(`正在尝试连接到 ${portSelect.value}...`);
+                const result = await sendRequest('/api/connect', 'POST', { port: portSelect.value });
+                logMessage(result.message);
+                isConnected = true;
+                updateUI();
+            } catch (error) {
+                logMessage(`连接失败: ${error.message}`);
+            }
+        });
+
+        // 断开连接
+        disconnectBtn.addEventListener('click', async () => {
+            try {
+                logMessage('正在断开连接...');
+                const result = await sendRequest('/api/disconnect', 'POST');
+                logMessage(result.message);
+                isConnected = false;
+                updateUI();
+            } catch (error) {
+                logMessage(`断开连接失败: ${error.message}`);
+            }
+        });
+
+        // 控制命令：开灯、退出、校准
+        forwardBtn.addEventListener('click', async () => {
+            try {
+                logMessage('发送开灯命令...');
+                const result = await sendRequest('/api/move', 'POST', { direction: 'light' });
+                logMessage(result.message);
+                if (result.arduino_response) {
+                    logMessage(`Arduino 响应: ${result.arduino_response}`);
+                }
+            } catch (error) {
+                logMessage(`开灯失败: ${error.message}`);
+            }
+        });
+
+        backwardBtn.addEventListener('click', async () => {
+            try {
+                logMessage('发送退出命令...');
+                const result = await sendRequest('/api/move', 'POST', { direction: 'exit' });
+                logMessage(result.message);
+                if (result.arduino_response) {
+                    logMessage(`Arduino 响应: ${result.arduino_response}`);
+                }
+            } catch (error) {
+                logMessage(`exit失败: ${error.message}`);
+            }
+        });
+
+        danceBtn.addEventListener('click', async () => {
+            try {
+                logMessage('发送跳舞命令...');
+                const result = await sendRequest('/api/move', 'POST', { direction: 'dance' });
+                logMessage(result.message);
+                if (result.arduino_response) {
+                    logMessage(`Arduino 响应: ${result.arduino_response}`);
+                }
+            } catch (error) {
+                logMessage(`跳舞失败: ${error.message}`);
+            }
+        });
+
+        calibrateBtn.addEventListener('click', async () => {
+            try {
+                logMessage('发送校准位置命令...');
+                const result = await sendRequest('/api/move', 'POST', { direction: 'calibrate' });
+                logMessage(result.message);
+                if (result.arduino_response) {
+                    logMessage(`Arduino 响应: ${result.arduino_response}`);
+                }
+            } catch (error) {
+                logMessage(`校准位置失败: ${error.message}`);
+            }
+        });
+    </script>
+</body>
+
+</html>
